@@ -1,0 +1,83 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the portal (staff or admin)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "name": { "type": "string", "description": "User full name" },
+        "email": { "type": "string", "format": "email", "description": "User email address" },
+        "role": { "type": "string", "enum": ["staff", "admin"], "description": "User role" },
+        "status": { "type": "string", "enum": ["active", "inactive"], "description": "User account status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["uid", "name", "email", "role", "status", "createdAt"]
+    },
+    "Application": {
+      "title": "Application",
+      "description": "A candidate application form submission with full details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Document ID" },
+        "narration": { "type": "string", "description": "Narration" },
+        "tenor": { "type": "string", "description": "Tenor" },
+        "nin": { "type": "string", "description": "NIN" },
+        "bvn": { "type": "string", "description": "BVN" },
+        "title": { "type": "string", "description": "Title" },
+        "surname": { "type": "string", "description": "Surname" },
+        "firstName": { "type": "string", "description": "First name" },
+        "middleName": { "type": "string", "description": "Middle name" },
+        "gender": { "type": "string", "description": "Gender" },
+        "maritalStatus": { "type": "string", "description": "Marital status" },
+        "dateOfBirth": { "type": "string", "format": "date", "description": "Date of birth" },
+        "countryOfBirth": { "type": "string", "description": "Country of birth" },
+        "nationality": { "type": "string", "description": "Nationality" },
+        "stateOfOrigin": { "type": "string", "description": "State of origin" },
+        "lgaOfOrigin": { "type": "string", "description": "LGA of Origin" },
+        "motherMaidenName": { "type": "string", "description": "Mother’s Maiden Name" },
+        "residentialAddress": { "type": "string", "description": "Residential Address" },
+        "nearestBusStop": { "type": "string", "description": "Nearest Bus stop" },
+        "cityTown": { "type": "string", "description": "City/Town" },
+        "stateOfResidence": { "type": "string", "description": "State of Residence" },
+        "occupation": { "type": "string", "description": "Occupation" },
+        "phone": { "type": "string", "description": "Phone number" },
+        "email": { "type": "string", "format": "email", "description": "Email" },
+        "amountNeeded": { "type": "number", "description": "Amount needed" },
+        "accountNumber": { "type": "string", "description": "Account Number" },
+        "bank": { "type": "string", "description": "Bank" },
+        "nokTitle": { "type": "string", "description": "Next of Kin Title" },
+        "nokSurname": { "type": "string", "description": "Next of Kin Surname" },
+        "nokFirstName": { "type": "string", "description": "Next of Kin First Name" },
+        "nokMiddleName": { "type": "string", "description": "Next of Kin Middle Name" },
+        "nokDateOfBirth": { "type": "string", "format": "date", "description": "Next of Kin Date of Birth" },
+        "nokRelationship": { "type": "string", "description": "Next of Kin Relationship" },
+        "nokGender": { "type": "string", "description": "Next of Kin Gender" },
+        "nokPhone": { "type": "string", "description": "Next of Kin Phone Number" },
+        "nokEmail": { "type": "string", "format": "email", "description": "Next of Kin Email" },
+        "nokResidentialAddress": { "type": "string", "description": "Next of Kin Residential Address" },
+        "nokNearestBusStop": { "type": "string", "description": "Next of Kin Nearest Bus stop" },
+        "nokCityTown": { "type": "string", "description": "Next of Kin City/Town" },
+        "nokState": { "type": "string", "description": "Next of Kin State" },
+        "nokLga": { "type": "string", "description": "Next of Kin LGA" },
+        "validIdUrl": { "type": "string", "description": "URL of Valid ID" },
+        "utilityBillUrl": { "type": "string", "description": "URL of Utility Bill" },
+        "passportPhotoUrl": { "type": "string", "description": "URL of Passport photo" },
+        "signatureUrl": { "type": "string", "description": "URL of Signature" },
+        "status": { "type": "string", "enum": ["pending", "reviewed", "approved", "rejected"], "description": "Application status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Submission timestamp" }
+      },
+      "required": ["nin", "bvn", "surname", "firstName", "email", "phone", "amountNeeded", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "User" },
+      "description": "Stores user profiles and roles"
+    },
+    "applications/{applicationId}": {
+      "schema": { "$ref": "Application" },
+      "description": "Stores candidate applications"
+    }
+  }
+}

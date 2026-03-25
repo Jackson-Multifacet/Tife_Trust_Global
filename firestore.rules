@@ -1,0 +1,107 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          ('email' in request.auth.token && request.auth.token.email == "faithjohnjackson@gmail.com")
+        );
+    }
+
+    function isStaff() {
+      return isAuthenticated() &&
+        (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'staff') || 
+          isAdmin()
+        );
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    function isValidUser(data) {
+      let allowedFields = ['uid', 'name', 'email', 'role', 'status', 'createdAt'];
+      let requiredFields = ['uid', 'name', 'email', 'role', 'status', 'createdAt'];
+      return hasOnlyAllowedFields(allowedFields) &&
+             hasRequiredFields(requiredFields) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.email is string && data.email.size() < 100 &&
+             (data.role == 'staff' || data.role == 'admin') &&
+             (data.status == 'active' || data.status == 'inactive') &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidApplication(data) {
+      let allowedFields = [
+        'narration', 'tenor', 'nin', 'bvn', 'title', 'surname', 'firstName', 'middleName',
+        'gender', 'maritalStatus', 'dateOfBirth', 'countryOfBirth', 'nationality',
+        'stateOfOrigin', 'lgaOfOrigin', 'motherMaidenName', 'residentialAddress',
+        'nearestBusStop', 'cityTown', 'stateOfResidence', 'occupation', 'phone', 'email',
+        'amountNeeded', 'accountNumber', 'bank',
+        'nokTitle', 'nokSurname', 'nokFirstName', 'nokMiddleName', 'nokDateOfBirth',
+        'nokRelationship', 'nokGender', 'nokPhone', 'nokEmail', 'nokResidentialAddress',
+        'nokNearestBusStop', 'nokCityTown', 'nokState', 'nokLga',
+        'validIdUrl', 'utilityBillUrl', 'passportPhotoUrl', 'signatureUrl',
+        'status', 'createdAt'
+      ];
+      let requiredFields = ['nin', 'bvn', 'surname', 'firstName', 'email', 'phone', 'amountNeeded', 'status', 'createdAt'];
+      
+      return hasOnlyAllowedFields(allowedFields) &&
+             hasRequiredFields(requiredFields) &&
+             data.nin is string && data.nin.size() >= 10 && data.nin.size() <= 20 &&
+             data.bvn is string && data.bvn.size() >= 10 && data.bvn.size() <= 20 &&
+             data.surname is string && data.surname.size() > 0 && data.surname.size() < 100 &&
+             data.firstName is string && data.firstName.size() > 0 && data.firstName.size() < 100 &&
+             data.email is string && data.email.size() < 100 &&
+             data.phone is string && data.phone.size() > 0 && data.phone.size() < 50 &&
+             data.amountNeeded is number && data.amountNeeded > 0 &&
+             (data.status == 'pending' || data.status == 'reviewed' || data.status == 'approved' || data.status == 'rejected') &&
+             data.createdAt is timestamp &&
+             // Optional fields validation
+             (!('narration' in data) || (data.narration is string && data.narration.size() < 500)) &&
+             (!('tenor' in data) || (data.tenor is string && data.tenor.size() < 100)) &&
+             (!('validIdUrl' in data) || (data.validIdUrl is string && data.validIdUrl.size() < 1000)) &&
+             (!('utilityBillUrl' in data) || (data.utilityBillUrl is string && data.utilityBillUrl.size() < 1000)) &&
+             (!('passportPhotoUrl' in data) || (data.passportPhotoUrl is string && data.passportPhotoUrl.size() < 1000)) &&
+             (!('signatureUrl' in data) || (data.signatureUrl is string && data.signatureUrl.size() < 1000));
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    ((isOwner(userId) && request.resource.data.role == 'staff' && request.resource.data.status == 'active') || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && uidNotModified() &&
+                    ((isOwner(userId) && request.resource.data.role == resource.data.role && request.resource.data.status == resource.data.status) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /applications/{applicationId} {
+      allow read: if isStaff();
+      allow create: if isValidApplication(request.resource.data) && request.resource.data.status == 'pending';
+      allow update: if isStaff() && isValidApplication(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}
