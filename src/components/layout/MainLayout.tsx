@@ -1,34 +1,36 @@
-import { Outlet, Link } from "react-router-dom"
-import { ModeToggle } from "@/components/mode-toggle"
-import { Button } from "@/components/ui/button"
-import { Menu, ChevronDown, LogIn, UserPlus, ShieldCheck } from "lucide-react"
+import { Outlet, Link } from "react-router-dom";
+import { ModeToggle } from "@/components/mode-toggle";
+import { Button } from "@/components/ui/button";
+import { Menu, ChevronDown, LogIn, UserPlus, ShieldCheck } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
-import { useState } from "react"
+} from "@/components/ui/sheet";
+import { useState } from "react";
 
 export default function MainLayout() {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
 
   const navLinks = [
     { name: "Home", href: "/" },
     { name: "About Us", href: "/about" },
     { name: "Services", href: "/services" },
-  ]
+    { name: "Team", href: "/team" },
+    { name: "Contact", href: "/contact" },
+  ];
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+      <header className="glass sticky top-0 z-50 border-b border-white/5">
         <div className="container flex h-16 items-center justify-between mx-auto px-4">
           <div className="flex items-center gap-6">
             <Link to="/" className="flex items-center space-x-3 group">
@@ -36,8 +38,12 @@ export default function MainLayout() {
                 <ShieldCheck className="h-6 w-6 text-primary-foreground" />
               </div>
               <div className="flex flex-col">
-                <span className="font-bold text-lg tracking-tight leading-none">Tife Trust</span>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Global</span>
+                <span className="font-bold text-lg tracking-tight leading-none">
+                  Tife Trust
+                </span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+                  Global
+                </span>
               </div>
             </Link>
             <nav className="hidden md:flex gap-6">
@@ -56,14 +62,22 @@ export default function MainLayout() {
             <div className="hidden md:flex items-center gap-4">
               <ModeToggle />
               <DropdownMenu>
-                <DropdownMenuTrigger render={<Button variant="ghost" className="gap-2" />}>
+                <DropdownMenuTrigger
+                  render={<Button variant="ghost" className="gap-2" />}
+                >
                   Portal <ChevronDown className="h-4 w-4" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem render={<Link to="/portal/login" />} className="gap-2">
+                  <DropdownMenuItem
+                    render={<Link to="/portal/login" />}
+                    className="gap-2"
+                  >
                     <LogIn className="h-4 w-4" /> Login
                   </DropdownMenuItem>
-                  <DropdownMenuItem render={<Link to="/candidate-form" />} className="gap-2">
+                  <DropdownMenuItem
+                    render={<Link to="/candidate-form" />}
+                    className="gap-2"
+                  >
                     <UserPlus className="h-4 w-4" /> Apply Now
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -77,26 +91,39 @@ export default function MainLayout() {
                 <SheetTrigger render={<Button variant="ghost" size="icon" />}>
                   <Menu className="h-6 w-6" />
                 </SheetTrigger>
-                <SheetContent side="right" className="w-full sm:w-[400px] p-0 border-l-0 bg-background/80 backdrop-blur-2xl">
+                <SheetContent
+                  side="right"
+                  className="w-full sm:w-[400px] p-0 border-l-0 bg-background/80 backdrop-blur-2xl"
+                >
                   <div className="flex flex-col h-full">
                     <SheetHeader className="p-6 border-b bg-muted/10 backdrop-blur-md">
                       <SheetTitle className="text-left">
-                        <Link to="/" onClick={() => setIsOpen(false)} className="flex items-center gap-3">
+                        <Link
+                          to="/"
+                          onClick={() => setIsOpen(false)}
+                          className="flex items-center gap-3"
+                        >
                           <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
                             <ShieldCheck className="h-6 w-6 text-primary-foreground" />
                           </div>
                           <div className="flex flex-col">
-                            <span className="font-bold tracking-tight text-lg">Tife Trust Global</span>
-                            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">Excellence in Finance</span>
+                            <span className="font-bold tracking-tight text-lg">
+                              Tife Trust Global
+                            </span>
+                            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+                              Excellence in Finance
+                            </span>
                           </div>
                         </Link>
                       </SheetTitle>
                     </SheetHeader>
-                    
+
                     <div className="flex-1 overflow-y-auto py-8 px-6">
                       <nav className="flex flex-col gap-6">
                         <div>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4 px-2">Main Navigation</p>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4 px-2">
+                            Main Navigation
+                          </p>
                           <div className="grid gap-1">
                             {navLinks.map((link) => (
                               <Link
@@ -105,17 +132,21 @@ export default function MainLayout() {
                                 onClick={() => setIsOpen(false)}
                                 className="flex items-center justify-between group p-4 rounded-2xl hover:bg-primary/10 transition-all duration-300 active:scale-[0.98]"
                               >
-                                <span className="text-lg font-semibold group-hover:text-primary transition-colors">{link.name}</span>
+                                <span className="text-lg font-semibold group-hover:text-primary transition-colors">
+                                  {link.name}
+                                </span>
                                 <ChevronDown className="h-5 w-5 -rotate-90 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                               </Link>
                             ))}
                           </div>
                         </div>
-                        
+
                         <div className="h-px bg-border/50 mx-2" />
-                        
+
                         <div>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4 px-2">Portal Access</p>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4 px-2">
+                            Portal Access
+                          </p>
                           <div className="grid gap-4">
                             <Link
                               to="/portal/login"
@@ -126,11 +157,15 @@ export default function MainLayout() {
                                 <LogIn className="h-6 w-6" />
                               </div>
                               <div className="flex flex-col">
-                                <p className="font-bold text-base">Staff Login</p>
-                                <p className="text-xs text-muted-foreground leading-tight">Manage applications & clients</p>
+                                <p className="font-bold text-base">
+                                  Staff Login
+                                </p>
+                                <p className="text-xs text-muted-foreground leading-tight">
+                                  Manage applications & clients
+                                </p>
                               </div>
                             </Link>
-                            
+
                             <Link
                               to="/candidate-form"
                               onClick={() => setIsOpen(false)}
@@ -141,19 +176,25 @@ export default function MainLayout() {
                               </div>
                               <div className="flex flex-col">
                                 <p className="font-bold text-base">Apply Now</p>
-                                <p className="text-xs text-primary-foreground/80 leading-tight">Start your financial journey today</p>
+                                <p className="text-xs text-primary-foreground/80 leading-tight">
+                                  Start your financial journey today
+                                </p>
                               </div>
                             </Link>
                           </div>
                         </div>
                       </nav>
                     </div>
-                    
+
                     <div className="p-8 border-t bg-muted/5 backdrop-blur-md">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex flex-col">
-                          <p className="text-xs text-muted-foreground font-semibold">© 2026 Tife Trust Global</p>
-                          <p className="text-[10px] text-muted-foreground/60">All rights reserved</p>
+                          <p className="text-xs text-muted-foreground font-semibold">
+                            © 2026 Tife Trust Global
+                          </p>
+                          <p className="text-[10px] text-muted-foreground/60">
+                            All rights reserved
+                          </p>
                         </div>
                         <ModeToggle />
                       </div>
@@ -176,5 +217,5 @@ export default function MainLayout() {
         </div>
       </footer>
     </div>
-  )
+  );
 }

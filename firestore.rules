@@ -15,7 +15,7 @@ service cloud.firestore {
         (
           (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
-          ('email' in request.auth.token && request.auth.token.email == "faithjohnjackson@gmail.com")
+          (request.auth.token.role == 'admin')
         );
     }
 
@@ -28,12 +28,12 @@ service cloud.firestore {
         );
     }
 
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
+    function hasOnlyAllowedFields(allowedFields) {
+      return request.resource.data.keys().hasOnly(allowedFields);
     }
 
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
+    function hasRequiredFields(requiredFields) {
+      return request.resource.data.keys().hasAll(requiredFields);
     }
 
     function uidNotModified() {
@@ -41,7 +41,7 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      let allowedFields = ['uid', 'name', 'email', 'role', 'status', 'createdAt'];
+      let allowedFields = ['uid', 'name', 'email', 'role', 'status', 'createdAt', 'lastLogin'];
       let requiredFields = ['uid', 'name', 'email', 'role', 'status', 'createdAt'];
       return hasOnlyAllowedFields(allowedFields) &&
              hasRequiredFields(requiredFields) &&
@@ -64,7 +64,7 @@ service cloud.firestore {
         'nokRelationship', 'nokGender', 'nokPhone', 'nokEmail', 'nokResidentialAddress',
         'nokNearestBusStop', 'nokCityTown', 'nokState', 'nokLga',
         'validIdUrl', 'utilityBillUrl', 'passportPhotoUrl', 'signatureUrl',
-        'status', 'createdAt'
+        'status', 'createdAt', 'staffAssignedUid', 'notes'
       ];
       let requiredFields = ['nin', 'bvn', 'surname', 'firstName', 'email', 'phone', 'amountNeeded', 'status', 'createdAt'];
       
@@ -78,30 +78,79 @@ service cloud.firestore {
              data.phone is string && data.phone.size() > 0 && data.phone.size() < 50 &&
              data.amountNeeded is number && data.amountNeeded > 0 &&
              (data.status == 'pending' || data.status == 'reviewed' || data.status == 'approved' || data.status == 'rejected') &&
-             data.createdAt is timestamp &&
-             // Optional fields validation
-             (!('narration' in data) || (data.narration is string && data.narration.size() < 500)) &&
-             (!('tenor' in data) || (data.tenor is string && data.tenor.size() < 100)) &&
-             (!('validIdUrl' in data) || (data.validIdUrl is string && data.validIdUrl.size() < 1000)) &&
-             (!('utilityBillUrl' in data) || (data.utilityBillUrl is string && data.utilityBillUrl.size() < 1000)) &&
-             (!('passportPhotoUrl' in data) || (data.passportPhotoUrl is string && data.passportPhotoUrl.size() < 1000)) &&
-             (!('signatureUrl' in data) || (data.signatureUrl is string && data.signatureUrl.size() < 1000));
+             data.createdAt is timestamp;
     }
 
+    // Audit logs collection - append only
+    match /auditLogs/{logId} {
+      allow create: if isAuthenticated() && 
+                       request.resource.data.userId == request.auth.uid &&
+                       request.resource.data.timestamp == request.time &&
+                       request.resource.data.action is string &&
+                       request.resource.data.collection is string;
+      allow read: if isAdmin();
+      allow update, delete: if false; // Never allow modifications to audit logs
+    }
+
+    // Users collection
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
-                    ((isOwner(userId) && request.resource.data.role == 'staff' && request.resource.data.status == 'active') || isAdmin());
+                       (
+                         // Admin can create any staff member
+                         (isAdmin() && request.resource.data.role == 'staff') ||
+                         // Users can only create themselves as staff (will need admin approval)
+                         (isOwner(userId) && request.resource.data.role == 'staff' && request.resource.data.status == 'active')
+                       );
       allow update: if isAuthenticated() && isValidUser(request.resource.data) && uidNotModified() &&
-                    ((isOwner(userId) && request.resource.data.role == resource.data.role && request.resource.data.status == resource.data.status) || isAdmin());
+                       (
+                         // Users can only update their own profile (role/status unchanged)
+                         (isOwner(userId) && request.resource.data.role == resource.data.role && request.resource.data.status == resource.data.status) ||
+                         // Admin can update any user
+                         isAdmin()
+                       );
       allow delete: if isAdmin();
     }
 
+    // Applications collection
     match /applications/{applicationId} {
-      allow read: if isStaff();
-      allow create: if isValidApplication(request.resource.data) && request.resource.data.status == 'pending';
-      allow update: if isStaff() && isValidApplication(request.resource.data);
+      allow read: if isStaff() && 
+                     (
+                       // Users can read their own applications
+                       resource.data.submittedByEmail == request.auth.token.email ||
+                       // Staff assigned to the application can read it
+                       resource.data.staffAssignedUid == request.auth.uid ||
+                       // Admins can read all
+                       isAdmin()
+                     );
+      
+      allow create: if isValidApplication(request.resource.data) && 
+                       request.resource.data.status == 'pending' &&
+                       request.resource.data.createdAt == request.time;
+      
+      allow update: if isStaff() && 
+                       isValidApplication(request.resource.data) &&
+                       (
+                         // Staff can only update status and notes on their assigned applications
+                         (resource.data.staffAssignedUid == request.auth.uid && 
+                          request.resource.data.status in ['pending', 'reviewed', 'approved', 'rejected']) ||
+                         // Admin can update everything
+                         isAdmin()
+                       );
+      
       allow delete: if isAdmin();
+    }
+
+    // Application notes - for staff comments
+    match /applicationNotes/{noteId} {
+      allow read: if isStaff();
+      allow create: if isAuthenticated() &&
+                       isStaff() &&
+                       request.resource.data.staffId == request.auth.uid &&
+                       request.resource.data.applicationId is string &&
+                       request.resource.data.note is string &&
+                       request.resource.data.createdAt == request.time;
+      allow update, delete: if isOwner(resource.data.staffId) || isAdmin();
     }
   }
 }
