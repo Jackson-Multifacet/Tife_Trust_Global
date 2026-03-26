@@ -19,6 +19,8 @@ import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
   updateProfile,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Eye, EyeOff, AlertCircle, CheckCircle, Info } from "lucide-react";
@@ -176,6 +178,87 @@ export default function PortalLogin() {
         errorMsg = "Invalid email address format.";
       }
 
+      setError(errorMsg);
+      toast.error(errorMsg);
+    } finally {
+      setIsLoading(false);
+      stopLoading();
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    startLoading();
+    setError("");
+    setSuccess("");
+
+    try {
+      const provider = new GoogleAuthProvider();
+      // Force account selection prompt
+      provider.setCustomParameters({ prompt: "select_account" });
+
+      const userCredential = await signInWithPopup(auth, provider);
+      const user = userCredential.user;
+
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+
+        // Check if user is approved/active
+        if (userData.status === "inactive") {
+          setError("Your account is pending admin approval. Please wait for email confirmation.");
+          await auth.signOut();
+          return;
+        }
+
+        if (userData.status === "suspended") {
+          setError("Your account has been suspended. Please contact support.");
+          await auth.signOut();
+          return;
+        }
+
+        toast.success(`Welcome back, ${userData.name || "Staff"}!`);
+        const targetRole = userData.role === "admin" ? "admin" : "staff";
+        navigate(`/portal/${targetRole}`);
+      } else {
+        // New user signup via Google
+        const name = user.displayName || "Staff Member";
+        const email = user.email || "";
+
+        await setDoc(userDocRef, {
+          uid: user.uid,
+          name: name,
+          email: email,
+          role: "staff",
+          status: "inactive",
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+
+        // Add audit log
+        await setDoc(
+          doc(db, "auditLogs", `${user.uid}_google_signup_${Date.now()}`),
+          {
+            userId: user.uid,
+            action: "staff_google_signup",
+            email: email,
+            timestamp: serverTimestamp(),
+            details: { name: name, status: "inactive" },
+          },
+        );
+
+        setSuccess("Account created successfully via Google! Awaiting admin approval to access the portal.");
+        toast.success("Account created! Please wait for admin approval.");
+        await auth.signOut();
+      }
+    } catch (err: any) {
+      console.error("Google login error:", err);
+      let errorMsg = "Failed to login with Google. Please try again.";
+      if (err.code === "auth/popup-closed-by-user") {
+        errorMsg = "Login window was closed before completion.";
+      }
       setError(errorMsg);
       toast.error(errorMsg);
     } finally {
@@ -505,6 +588,30 @@ export default function PortalLogin() {
                       </button>
                     </div>
                   </div>
+
+                  <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">
+                        Or continue with
+                      </span>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full rounded-lg"
+                    onClick={handleGoogleLogin}
+                    disabled={isLoading}
+                  >
+                    <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
+                      <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path>
+                    </svg>
+                    Continue with Google
+                  </Button>
                 </form>
               </TabsContent>
 
@@ -740,6 +847,30 @@ export default function PortalLogin() {
                       </button>
                     </div>
                   </div>
+
+                  <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">
+                        Or continue with
+                      </span>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full rounded-lg"
+                    onClick={handleGoogleLogin}
+                    disabled={isLoading}
+                  >
+                    <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
+                      <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path>
+                    </svg>
+                    Continue with Google
+                  </Button>
                 </form>
               </TabsContent>
             </Tabs>
